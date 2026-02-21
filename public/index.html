@@ -1,0 +1,65 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NWebGame</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="panel">
+      <div id="title">NWebGame</div>
+      <div id="stats">Подключение...</div>
+    </div>
+    <div class="panel" id="leaderboard">Лидеры: ...</div>
+  </div>
+
+  <div id="chatBox">
+    <div id="chatLog"></div>
+    <form id="chatForm" autocomplete="off">
+      <input id="chatInput" type="text" maxlength="220" placeholder="Сообщение в чат" />
+      <button type="submit" class="btn">Отпр.</button>
+    </form>
+  </div>
+
+  <div id="lobbyOverlay">
+    <div class="card">
+      <h1>NWebGame</h1>
+      <p id="lobbyState">Создай комнату или войди по коду</p>
+
+      <div class="row profile">
+        <input id="nameInput" type="text" maxlength="18" placeholder="Ваш ник" />
+        <input id="avatarInput" class="hiddenInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        <button id="avatarBtn" type="button" class="btn alt">Выбрать аватар</button>
+      </div>
+
+      <div class="avatarPreviewWrap">
+        <img id="avatarPreview" alt="avatar" class="hidden" />
+        <div id="avatarFallback" class="avatarFallback">P</div>
+      </div>
+
+      <div id="roomActions" class="row">
+        <button id="createBtn" class="btn">Создать комнату</button>
+        <input id="roomCodeInput" type="text" maxlength="6" placeholder="Код комнаты" />
+        <button id="joinBtn" class="btn">Войти</button>
+      </div>
+
+      <div id="roomPanel" class="hidden">
+        <div class="roomHead">
+          <span>Код: <b id="roomCodeLabel">-</b></span>
+          <button id="leaveBtn" class="btn ghost">Выйти</button>
+        </div>
+        <button id="startBtn" class="btn start hidden">Начать игру</button>
+        <div id="roomPlayers"></div>
+      </div>
+
+      <div id="message"></div>
+    </div>
+  </div>
+
+  <script src="/client.js"></script>
+</body>
+</html>

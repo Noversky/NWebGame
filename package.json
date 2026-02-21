@@ -1,0 +1,12 @@
+﻿{
+  "name": "nwebgame",
+  "version": "1.0.0",
+  "description": "Lightweight multiplayer web game for weak devices and poor internet",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
