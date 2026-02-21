@@ -50,7 +50,12 @@ const game = {
   lastSentY: 0,
   avatarData: '',
   avatarImages: new Map(),
-  isRunning: false
+  isRunning: false,
+  audioReady: false,
+  audioStarted: false,
+  audioCtx: null,
+  musicTimer: null,
+  lastFoodSfxAt: 0
 };
 
 function resize() {
@@ -79,6 +84,84 @@ function wsSend(payload) {
   if (game.ws && game.ws.readyState === WebSocket.OPEN) {
     game.ws.send(JSON.stringify(payload));
   }
+}
+
+function ensureAudio() {
+  if (game.audioReady) {
+    return;
+  }
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) {
+    return;
+  }
+  game.audioCtx = new Ctx();
+  game.audioReady = true;
+}
+
+function playTone(freq, lengthSec, type, gainValue, when = 0) {
+  if (!game.audioReady || !game.audioCtx) {
+    return;
+  }
+  const ctxAudio = game.audioCtx;
+  const osc = ctxAudio.createOscillator();
+  const gain = ctxAudio.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.value = 0.0001;
+  osc.connect(gain);
+  gain.connect(ctxAudio.destination);
+
+  const startAt = ctxAudio.currentTime + when;
+  const endAt = startAt + lengthSec;
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(gainValue, startAt + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+  osc.start(startAt);
+  osc.stop(endAt + 0.01);
+}
+
+function playEatFoodSfx() {
+  playTone(620 + Math.random() * 180, 0.09, 'triangle', 0.03);
+}
+
+function playEatPlayerSfx() {
+  playTone(200, 0.16, 'square', 0.05);
+  playTone(320, 0.15, 'sawtooth', 0.032, 0.05);
+}
+
+function startRandomMusic() {
+  if (!game.audioReady || !game.audioCtx || game.musicTimer) {
+    return;
+  }
+  const sets = [
+    [262, 294, 330, 392, 440, 523],
+    [220, 247, 294, 330, 370, 440],
+    [196, 220, 247, 294, 330, 392]
+  ];
+  const notes = sets[Math.floor(Math.random() * sets.length)];
+  let step = 0;
+  game.musicTimer = setInterval(() => {
+    if (!game.isRunning || !game.audioReady) {
+      return;
+    }
+    const n1 = notes[step % notes.length];
+    const n2 = notes[(step + 2) % notes.length];
+    playTone(n1, 0.28, 'sine', 0.016);
+    playTone(n2 * 0.5, 0.34, 'triangle', 0.011);
+    step += 1;
+  }, 330);
+}
+
+function bootAudio() {
+  ensureAudio();
+  if (!game.audioReady || game.audioStarted) {
+    return;
+  }
+  game.audioStarted = true;
+  if (game.audioCtx.state === 'suspended') {
+    game.audioCtx.resume().catch(() => {});
+  }
+  startRandomMusic();
 }
 
 function showMessage(text) {
@@ -128,7 +211,7 @@ function renderRoomPlayers() {
       const avatar = p.avatar
         ? `<img src="${p.avatar}" alt="" />`
         : `<div class="roomPlayerAvatar">${escapeHtml(letter)}</div>`;
-      return `<div class="roomPlayer">${avatar}<div>${escapeHtml(p.name)}${hostMark}<br><small>${alive} | очки: ${p.score}</small></div></div>`;
+      return `<div class="roomPlayer">${avatar}<div><span style="color:${escapeHtml(p.color || '#ffffff')}">${escapeHtml(p.name)}</span>${hostMark}<br><small>${alive} | очки: ${p.score}</small></div></div>`;
     })
     .join('');
 }
@@ -174,6 +257,7 @@ function applyRoomUpdate(msg) {
       id: p.id,
       name: p.name,
       avatar: p.avatar,
+      color: p.color || '#5ec2ff',
       score: p.score,
       alive: p.alive
     });
@@ -186,9 +270,14 @@ function applyRoomUpdate(msg) {
 
 function handleSnapshot(msg) {
   const seenIds = new Set();
+  let myMassBefore = null;
+  let myMassAfter = null;
   for (const p of msg.p) {
     const [id, x, y, mass, score] = p;
     const old = game.playersDraw.get(id);
+    if (id === game.id && old) {
+      myMassBefore = old.mass;
+    }
     game.playersDraw.set(id, {
       id,
       x: old ? old.x : x,
@@ -196,8 +285,12 @@ function handleSnapshot(msg) {
       tx: x,
       ty: y,
       mass,
-      score
+      score,
+      trail: old && old.trail ? old.trail : []
     });
+    if (id === game.id) {
+      myMassAfter = mass;
+    }
     seenIds.add(id);
 
     const meta = game.playersMeta.get(id);
@@ -212,6 +305,14 @@ function handleSnapshot(msg) {
   }
 
   game.food = msg.f.map((f, i) => ({ id: i, x: f[0], y: f[1], mass: f[2] }));
+
+  if (myMassBefore !== null && myMassAfter !== null && myMassAfter > myMassBefore + 0.1) {
+    const now = Date.now();
+    if (now - game.lastFoodSfxAt > 70) {
+      game.lastFoodSfxAt = now;
+      playEatFoodSfx();
+    }
+  }
 }
 
 function connect() {
@@ -266,6 +367,7 @@ function connect() {
       game.isRunning = true;
       game.playersDraw.clear();
       showMessage('');
+      bootAudio();
       refreshUI();
       return;
     }
@@ -293,6 +395,7 @@ function connect() {
 
     if (msg.t === 'eat') {
       addChatLine('Система', `Вы съели ${msg.victim} и получили ${msg.gain} очков`, true);
+      playEatPlayerSfx();
       return;
     }
 
@@ -388,6 +491,10 @@ function render() {
   for (const p of game.playersDraw.values()) {
     p.x += (p.tx - p.x) * 0.35;
     p.y += (p.ty - p.y) * 0.35;
+    p.trail.push({ x: p.x, y: p.y });
+    if (p.trail.length > 20) {
+      p.trail.shift();
+    }
   }
 
   const me = game.playersDraw.get(game.id);
@@ -418,11 +525,30 @@ function render() {
 
   for (const p of game.playersDraw.values()) {
     const meta = game.playersMeta.get(p.id);
+    if (!p.trail || p.trail.length < 2) {
+      continue;
+    }
+    ctx.beginPath();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = meta ? meta.color : '#5ec2ff';
+    ctx.globalAlpha = 0.25;
+    ctx.lineWidth = Math.max(3, massToRadius(p.mass) * 0.28);
+    ctx.moveTo(p.trail[0].x, p.trail[0].y);
+    for (let i = 1; i < p.trail.length; i += 1) {
+      ctx.lineTo(p.trail[i].x, p.trail[i].y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  for (const p of game.playersDraw.values()) {
+    const meta = game.playersMeta.get(p.id);
     const r = massToRadius(p.mass);
-    const isMe = p.id === game.id;
+    const playerColor = meta ? meta.color : '#5ec2ff';
 
     ctx.beginPath();
-    ctx.fillStyle = isMe ? '#5ec2ff' : '#f48f5f';
+    ctx.fillStyle = playerColor;
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
     ctx.fill();
 
@@ -556,6 +682,9 @@ window.addEventListener('touchend', () => {
   game.inputX = 0;
   game.inputY = 0;
 });
+
+window.addEventListener('pointerdown', bootAudio, { passive: true });
+window.addEventListener('keydown', bootAudio);
 
 window.addEventListener('resize', resize);
 resize();

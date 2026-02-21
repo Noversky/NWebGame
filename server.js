@@ -65,6 +65,13 @@ function sanitizeChat(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 220);
 }
 
+function randomPlayerColor() {
+  const hue = Math.floor(rand(0, 360));
+  const sat = Math.floor(rand(68, 92));
+  const light = Math.floor(rand(52, 66));
+  return `hsl(${hue} ${sat}% ${light}%)`;
+}
+
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   for (let attempt = 0; attempt < 4000; attempt += 1) {
@@ -111,6 +118,7 @@ function roomPublicPlayers(room) {
     id: p.id,
     name: p.name,
     avatar: p.avatar,
+    color: p.color,
     score: p.score,
     alive: p.alive
   }));
@@ -492,6 +500,7 @@ function createPlayer(ws) {
     alive: false,
     name: `Player ${nextPlayerId - 1}`,
     avatar: '',
+    color: randomPlayerColor(),
     lastChatAt: 0
   };
 
