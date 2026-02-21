@@ -34,6 +34,7 @@ canvas {
   justify-content: space-between;
   gap: 10px;
   pointer-events: none;
+  flex-wrap: wrap;
 }
 
 .panel {
@@ -291,6 +292,14 @@ input {
 }
 
 @media (max-width: 680px) {
+  #hud {
+    inset: 10px 10px auto 10px;
+  }
+
+  .panel {
+    width: 100%;
+  }
+
   #leaderboard {
     min-width: 160px;
     font-size: 11px;
@@ -308,5 +317,55 @@ input {
 
   #chatBox {
     width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 480px) {
+  #hud {
+    gap: 6px;
+  }
+
+  #chatLog {
+    max-height: 120px;
+    font-size: 11px;
+  }
+
+  #chatForm {
+    padding: 6px;
+  }
+
+  .card {
+    width: 100%;
+    padding: 12px;
+  }
+
+  #lobbyOverlay {
+    padding: 10px;
+  }
+
+  input,
+  .btn {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  #roomPlayers {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+}
+
+@media (max-height: 520px) {
+  #lobbyOverlay {
+    align-items: flex-start;
+  }
+
+  .card {
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
+
+  #chatLog {
+    max-height: 110px;
   }
 }
