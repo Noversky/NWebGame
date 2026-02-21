@@ -16,6 +16,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  -webkit-text-size-adjust: 100%;
   color: var(--text);
   font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
   background: radial-gradient(circle at 20% 10%, #16293b 0%, var(--bg) 46%, var(--bg2) 100%);
@@ -145,6 +146,7 @@ input {
   background: #0f2232;
   color: var(--text);
   padding: 9px 10px;
+  font-size: 16px;
 }
 
 .btn {
@@ -346,6 +348,9 @@ input {
   input,
   .btn {
     padding: 8px 10px;
+  }
+
+  .btn {
     font-size: 14px;
   }
 
